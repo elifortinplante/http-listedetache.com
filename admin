@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin – Liste de Tâches</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Admin – Liste de Tâches</h1>
+
+<div>
+<h2>Ajouter une tâche</h2>
+<input type="text" id="newTask" placeholder="Nom de la tâche">
+<input type="number" id="taskPoints" placeholder="Points" value="5" min="1">
+<button onclick="addTask()">Ajouter tâche</button>
+<button onclick="deleteAllTasks()">Tout supprimer</button>
+</div>
+
+<div>
+<h2>Ajouter / Retirer un ami</h2>
+<input type="text" id="newFriend" placeholder="Nom ami">
+<button onclick="addFriend()">Ajouter ami</button>
+<select id="removeFriendSelect" size="5"></select>
+<button onclick="removeFriend()">Supprimer ami</button>
+</div>
+
+<div>
+<h2>Retirer des points</h2>
+<select id="pointsFriendSelect" size="5"></select>
+<input type="number" id="removePointsInput" placeholder="Points à retirer" min="1">
+<button onclick="removePoints()">Retirer points</button>
+</div>
+
+<h2>Liste des tâches</h2>
+<ul id="taskList"></ul>
+
+<h2>Tableau des scores</h2>
+<table id="scoreTable">
+<thead><tr><th>Ami</th><th>Points</th></tr></thead>
+<tbody></tbody>
+</table>
+
+<script>
+let data = JSON.parse(localStorage.getItem('todolist')) || {tasks:[], friends:[]};
+
+function save() { localStorage.setItem('todolist', JSON.stringify(data)); }
+
+// Ajouter tâche
+function addTask(){
+  const name = document.getElementById('newTask').value.trim();
+  const points = parseInt(document.getElementById('taskPoints').value);
+  if(!name || !points) return;
+  data.tasks.push({name:name, points:points, completed:false, persistent:true});
+  document.getElementById('newTask').value='';
+  document.getElementById('taskPoints').value=5;
+  save();
+  loadTasks();
+}
+
+// Ajouter ami
+function addFriend(){
+  const name = document.getElementById('newFriend').value.trim();
+  if(!name) return;
+  data.friends.push({name:name, points:0});
+  document.getElementById('newFriend').value='';
+  save();
+  loadFriends();
+}
+
+// Supprimer ami sélectionné
+function removeFriend(){
+  const select = document.getElementById('removeFriendSelect');
+  const idx = select.selectedIndex;
+  if(idx >= 0){
+    data.friends.splice(idx,1);
+    save();
+    loadFriends();
+  }
+}
+
+// Retirer points à un ami
+function removePoints(){
+  const select = document.getElementById('pointsFriendSelect');
+  const idx = select.selectedIndex;
+  const points = parseInt(document.getElementById('removePointsInput').value);
+  if(idx >=0 && points > 0){
+    data.friends[idx].points = Math.max(0, data.friends[idx].points - points);
+    document.getElementById('removePointsInput').value='';
+    save();
+    loadFriends();
+  }
+}
+
+// Supprimer toutes les tâches
+function deleteAllTasks(){
+  if(confirm("Supprimer toutes les tâches ?")){
+    data.tasks=[];
+    save();
+    loadTasks();
+  }
+}
+
+// Charger tâches
+function loadTasks(){
+  const list = document.getElementById('taskList');
+  list.innerHTML='';
+  data.tasks.forEach((task,i)=>{
+    const li = document.createElement('li');
+    li.textContent = `${task.name} (${task.points} pts) `;
+
+    // Emoji persistante
+    const emoji = document.createElement('span');
+    emoji.textContent = task.persistent ? '✅' : '❌';
+    emoji.style.cursor='pointer';
+    emoji.onclick = ()=>{
+      task.persistent = !task.persistent;
+      save();
+      loadTasks();
+    };
+    li.appendChild(emoji);
+
+    // Sélection amis
+    const select = document.createElement('select');
+    select.multiple = true;
+    select.size = Math.min(5, data.friends.length);
+    data.friends.forEach((f,j)=>{
+      const option = document.createElement('option');
+      option.value = j;
+      option.textContent = f.name;
+      select.appendChild(option);
+    });
+    li.appendChild(select);
+
+    // Bouton attribuer points
+    const btn = document.createElement('button');
+    btn.textContent = 'Attribuer points';
+    btn.onclick = ()=>{
+      const selectedIndexes = Array.from(select.selectedOptions).map(o=>parseInt(o.value));
+      selectedIndexes.forEach(idx=>{
+        data.friends[idx].points += task.points;
+      });
+      if(!task.persistent) task.completed = true;
+      save();
+      loadTasks();
+      loadFriends();
+    };
+    if(task.completed && !task.persistent) btn.disabled = true;
+
+    li.appendChild(btn);
+
+    // Supprimer tâche
+    const del = document.createElement('button');
+    del.textContent = 'Supprimer';
+    del.onclick = ()=>{
+      data.tasks.splice(i,1);
+      save();
+      loadTasks();
+    };
+    li.appendChild(del);
+
+    list.appendChild(li);
+  });
+}
+
+// Charger amis / scores
+function loadFriends(){
+  const tbody = document.getElementById('scoreTable').querySelector('tbody');
+  tbody.innerHTML='';
+  const removeSelect = document.getElementById('removeFriendSelect');
+  const pointsSelect = document.getElementById('pointsFriendSelect');
+  removeSelect.innerHTML='';
+  pointsSelect.innerHTML='';
+
+  data.friends.forEach((f,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td>${f.name}</td><td>${f.points}</td>`;
+    tbody.appendChild(tr);
+
+    // Ajouter ami dans select pour suppression
+    const opt1 = document.createElement('option');
+    opt1.value = i;
+    opt1.textContent = f.name;
+    removeSelect.appendChild(opt1);
+
+    // Ajouter ami dans select pour retirer points
+    const opt2 = document.createElement('option');
+    opt2.value = i;
+    opt2.textContent = f.name;
+    pointsSelect.appendChild(opt2);
+  });
+}
+
+loadTasks();
+loadFriends();
+</script>
+</body>
+</html>

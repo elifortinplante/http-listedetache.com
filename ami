@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mon Score</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Mon Score</h1>
+<ul id="friendsScore"></ul>
+
+<script>
+let data = JSON.parse(localStorage.getItem('todolist')) || {tasks:[], friends:[]};
+
+const ul = document.getElementById('friendsScore');
+ul.innerHTML = '';
+
+data.friends.forEach(f=>{
+  const li = document.createElement('li');
+  li.textContent = `${f.name} : ${f.points} points`;
+  ul.appendChild(li);
+});
+</script>
+
+</body>
+</html>
